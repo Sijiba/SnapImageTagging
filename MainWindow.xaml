@@ -1,0 +1,151 @@
+﻿<Window x:Class="SnapImageTaggingWindow.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SnapImageTaggingWindow"
+        mc:Ignorable="d"
+        Title="Tag Your Images" Height="774" Width="1134" Closing="Window_Closing" Background="#FFCCCCCC" Foreground="Black" Icon="/crushedpreview.jpg">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+    <Grid x:Name="WindowGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="InfoColumn" Width="*"/>
+            <ColumnDefinition x:Name="BrowserColumn" Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <StackPanel x:Name="OptionsStack">
+            <Label x:Name="FileCountLabel_Copy" Content="Select a folder to begin tagging." FontSize="16" FontWeight="SemiBold"/>
+            <DockPanel x:Name="FolderSelectDock" LastChildFill="False" Margin="5,2,5,5">
+                <Button x:Name="FileBrowse" Content="Browse..." Width="NaN" Click="FileBrowseSource_Click" VerticalAlignment="Top" Padding="5,5,5,5"/>
+                <Label x:Name="PathLabel" Content="Select source folder..." VerticalAlignment="Top" HorizontalAlignment="Right"/>
+            </DockPanel>
+            <Label x:Name="FileCountLabel" Content="Please select source folder."/>
+            <Label x:Name="RisCategoryLabel" Content="Reverse Image Search options" Margin="0,5,0,0" FontSize="16"/>
+            <CheckBox x:Name="ReverseImageSearchCheck" Content="Reverse Image Search Unknown Characters" IsChecked="{Binding ShouldOpenBrowser, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}"/>
+            <CheckBox x:Name="IncludeSkippedCheck" Content="Reverse Image Search Skipped Characters" IsChecked="{Binding ShouldBrowseSkipped, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}"/>
+            <CheckBox x:Name="ShouldShowBrowserWindowCheck" Content="Show browser window during Reverse Image Search" IsChecked="{Binding ShowBrowserWindow, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}"/>
+            <Label x:Name="TaggingCategoryLabel" Content="Tagging Options" HorizontalAlignment="Left" Margin="0,5,0,0" FontSize="{Binding FontSize, ElementName=RisCategoryLabel}" FontWeight="{Binding FontWeight, ElementName=RisCategoryLabel}"/>
+            <CheckBox x:Name="TagDatesCheck" Content="Add missing taken dates, using last write time" IsChecked="{Binding ShouldTagMissingDates, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}"/>
+            <CheckBox x:Name="TagEventsCheck" IsChecked="{Binding ShouldTagEvents, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" HorizontalAlignment="Left">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Content="Add event tags, using the parent folder name" Padding="1,1,5,1"/>
+                    <Button Grid.Column="1">
+                        <CheckBox x:Name="ShowEventTagOptionsBox" Content="Show" IsChecked="True" Padding="3,0,1,0" />
+                    </Button>
+                </Grid>
+            </CheckBox>
+            <Grid
+                Visibility="{Binding IsChecked, Converter={StaticResource BooleanToVisibilityConverter}, ElementName=ShowEventTagOptionsBox}" x:Name="EventTagOptionsGrid" Background="#FFD8D8D8" Height="60" Width="299" HorizontalAlignment="Left" Margin="20,0,0,0">
+                <Grid.RowDefinitions
+                >
+                    <RowDefinition
+                />
+                    <RowDefinition
+                />
+                    <RowDefinition
+                />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions
+                >
+                    <ColumnDefinition
+                Width="Auto"/>
+                    <ColumnDefinition
+                Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Label
+                Content="- Name starts after:" Padding="1,1,1,1"/>
+                <Label
+                Content="- Name ends before:" Padding="1,1,1,1" Grid.Row="1"/>
+                <Label
+                Content="- Separate words by: " Padding="1,1,1,1" Grid.Row="2"/>
+                <TextBox
+                ToolTip="Leave blank to start at the beginning of the folder name." Text="{Binding EventStartTerminator, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" x:Name="EventNameStartBox" MaxLength="50" MinWidth="100" Margin="5,1,5,1" Grid.Column="1"/>
+                <TextBox
+                ToolTip="Leave blank to end at the end of the folder name." Text="{Binding EventEndTerminator, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" Grid.Row="1" x:Name="EventNameEndBox" MaxLength="{Binding MaxLength, ElementName=EventNameStartBox}" MinWidth="{Binding MinWidth, ElementName=EventNameStartBox}" Margin="5,1,5,1" Grid.Column="1"/>
+                <TextBox
+                VerticalAlignment="Top" ToolTip="Leave blank to separate terms by spaces." Text="{Binding EventDelimiter, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" Grid.Row="2" MaxLength="1" MinWidth="30" Margin="5,1,5,1" HorizontalAlignment="Left" Grid.Column="1"/>
+            </Grid>
+            <CheckBox x:Name="TagColorsCheckUnimplemented" Content="Add tags for subject's dominant colors" IsChecked="{Binding ShouldTagColors, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" IsEnabled="False" ToolTip="Not feature-complete" Focusable="False" IsTabStop="False" Visibility="Collapsed"/>
+            <Grid HorizontalAlignment="Left">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="TagCustomCheck" IsChecked="{Binding ShouldUseCustomTags, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" Content="Add custom tag(s) to each image:"/>
+                <TextBox x:Name="CustomTagsTextBox" Text="{Binding CustomTagString, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}, Mode=FindAncestor}}" ToolTip="Add custom tags, separated by semicolons (;)" MaxLength="1000" MinWidth="100" MinHeight="5" VerticalContentAlignment="Stretch" HorizontalScrollBarVisibility="Disabled" TextWrapping="Wrap" HorizontalContentAlignment="Stretch" Grid.Column="1" Margin="5,0,5,0"/>
+            </Grid>
+            <Button x:Name="OptionsStartButton" Content="Start" Margin="5,5,5,5" Click="OptionsStartButton_Click"/>
+        </StackPanel>
+        <Grid x:Name="BrowserGrid"
+            Grid.Column="1" LayoutUpdated="BrowserGrid_LayoutUpdated">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="Find the subject of this picture!" HorizontalAlignment="Center" Grid.Column="1" Padding="0,5,5,5" Margin="5,5,5,5" 
+                           />
+                <Image x:Name="SoughtImage" Grid.RowSpan="7" Height="250" Margin="5,5,5,5" MouseDown="SoughtImage_MouseDown" Source="/crushedpreview.jpg"/>
+                <Button x:Name="BrowserMatchingButton" Content="Match a tagged image..." Background="#FFC3F7B5" Grid.Column="1" Grid.Row="1" Margin="5,5,5,5" ToolTip="Open a browser to find a tagged image with the same subject." Click="BrowserMatchingButton_Click"/>
+                <Button x:Name="BrowserSkipButton" Content="Skip" Click="BrowserSkipButton_Click" Background="#FFEEF7B5" Grid.Column="1" Grid.Row="2" Margin="5,5,5,5" ToolTip="Mark this image as &quot;unknownName&quot; and move on to the next."/>
+                <Button x:Name="BrowserEndButton" Content="Stop Searching" Grid.Column="1" Click="BrowserEndButton_Click" Background="#FFFBB6B6" Grid.Row="3" Margin="5,5,5,5" ToolTip="Close the manual search without making changes to this image's metadata."/>
+                <Label Content="Or enter their name manually below." HorizontalAlignment="Center" Grid.Row="4" Grid.Column="1" Margin="5,5,5,5"/>
+                <Grid Grid.Row="5" Grid.Column="1" Margin="5,5,5,5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="NameEntryBox" TextWrapping="Wrap" Margin="5,5,5,5" ToolTip="Enter a name or hyperlink here." KeyUp="TextBox_KeyUp" 
+                         />
+                    <Button x:Name="NameSubmitButton" Grid.Column="1" Content="Submit" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,5,5,5" Click="NameSubmitButton_Click" ToolTip="Confirm the entered name."/>
+                </Grid>
+                <StackPanel 
+                Orientation="Horizontal" HorizontalAlignment="Center" Grid.Row="6" Grid.Column="1" Margin="5,5,5,5">
+                    <Label Content="Last label applied:"/>
+                    <Label x:Name="LastNameLabel" Content="(None)"/>
+                </StackPanel>
+            </Grid>
+            <ScrollViewer x:Name="ImagesPane" VerticalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="5,5,5,5" Grid.Row="1" Grid.ColumnSpan="2">
+                <WrapPanel x:Name="SimilarImages">
+                    <Image Height="100" Width="100" Source="/We're So Back.jpg" MouseDown="Image_MouseDown" Cursor="Hand"/>
+                </WrapPanel>
+            </ScrollViewer>
+        </Grid>
+
+    </Grid>
+</Window>
