@@ -1,30 +1,15 @@
-﻿using System.Text;
-using System.IO;
+﻿using System.IO;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Windows.Forms;
-using Microsoft.Win32;
 using ExifLibrary;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using System;
 using System.Text.RegularExpressions;
-using System.Security.Policy;
 using System.Windows.Threading;
-using System.Net;
-using OpenQA.Selenium.Interactions;
-using System.Xml.Linq;
-using OpenQA.Selenium.DevTools;
 using OpenQA.Selenium.Support.UI;
-using System.Collections;
 
 namespace SnapImageTaggingWindow
 {
@@ -50,7 +35,8 @@ namespace SnapImageTaggingWindow
         {
             int imgCount = 0;
             int untagged = 0;
-            int unnamed = 0;
+            int skipped = 0;
+
             if (Directory.Exists(SourceDirPath))
             {
                 //Count jpg files
@@ -65,10 +51,17 @@ namespace SnapImageTaggingWindow
                         var tagsMaybe = img.Properties.Get(ExifTag.WindowsKeywords);
                         if (tagsMaybe != null)
                         {
-                            var tagSet = new List<string>();
                             if (((string)tagsMaybe.Value).Contains(nameless))
                             {
-                                unnamed++;
+                                skipped++;
+                            }
+                            else
+                            {
+                                var tagList = GetTagStringList((string)tagsMaybe.Value);
+                                if (!HasMetadataSocials(ref tagList))
+                                {
+                                    untagged++;
+                                }
                             }
                         }
                         else
@@ -78,8 +71,8 @@ namespace SnapImageTaggingWindow
                     }
                 }
             }
-            FileCountLabel.Content = String.Format("{0} images found. {1} untagged, {2} unnamed.",
-                imgCount, untagged, unnamed);
+            FileCountLabel.Content = String.Format("{0} images: {1} without names, {2} skipped, {3} completed.",
+                imgCount, untagged, skipped, imgCount - (untagged + skipped));
         }
 
         private void FileBrowseSource_Click(object sender, RoutedEventArgs e)
@@ -267,9 +260,10 @@ namespace SnapImageTaggingWindow
             {
                 var file = _fileList.ElementAt(_browserImgIndex);
                 var img = ExifLibrary.JPEGFile.FromFile(file);
+
                 if (img != null)
                 {
-                    var tagSet = new List<string>();
+                    var tagSet = GetTagStringList(ref img);
 
                     //tagSet.Add("tag:tagging_incomplete");
                     if (editTags(ref img, ref tagSet))
@@ -378,11 +372,17 @@ namespace SnapImageTaggingWindow
         private List<string> GetTagStringList(ref ImageFile img)
         {
             var tagsMaybe = img.Properties.Get(ExifTag.WindowsKeywords);
-            var tags = new List<string>();
             if (tagsMaybe != null)
             {
-                tags.AddRange((tagsMaybe as WindowsByteString).Value.Split(";"));
+                return GetTagStringList((tagsMaybe as WindowsByteString).Value);
             }
+            return new List<string>();
+        }
+
+        private List<string> GetTagStringList(string tagString)
+        {
+            var tags = new List<string>();
+            tags.AddRange(tagString.Split(";"));
             return tags;
         }
 
@@ -524,9 +524,11 @@ namespace SnapImageTaggingWindow
                         user = user.Substring(startIndex);
                     }
                     if (user.Contains('/'))
-                        user = user.Substring(0, user.IndexOf("/"));
-                    if (user.Contains("@"))
+                        user = user.Substring(0, user.IndexOf('/'));
+                    if (user.Contains('@'))
                         user = user.Substring(1);
+                    if (user.Contains('?'))
+                        user = user.Substring(0, user.IndexOf('?'));
                     if (host == "x")
                         host = "twitter";
 
@@ -629,7 +631,8 @@ namespace SnapImageTaggingWindow
         private void completeTagging()
         {
             hideBrowserSide();
-            FileCountLabel.Content = "Metadata applied.";
+            UpdateDirectoryInfo();
+            //FileCountLabel.Content = "Metadata applied.";
         }
 
         private void hideBrowserSide()
