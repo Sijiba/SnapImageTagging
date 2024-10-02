@@ -6,11 +6,11 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using ExifLibrary;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
 using System.Text.RegularExpressions;
 using System.Windows.Threading;
 using OpenQA.Selenium.Support.UI;
 using Tags = Tagging.Tagging;
+using OpenQA.Selenium.Firefox;
 
 namespace SnapImageTaggingWindow
 {
@@ -87,7 +87,7 @@ namespace SnapImageTaggingWindow
             }
         }
 
-        private OpenQA.Selenium.Chrome.ChromeDriver _driver;
+        private OpenQA.Selenium.Firefox.FirefoxDriver _driver;
         private IEnumerable<string> _fileList;
         private int _browserImgIndex;
 
@@ -384,7 +384,7 @@ namespace SnapImageTaggingWindow
                 {
                     if (_driver == null)
                     {
-                        ShowChromeWindow();
+                        ShowWebBrowserWindow();
                     }
                     VisualSearchImage(filePath);
                     break;
@@ -569,21 +569,19 @@ namespace SnapImageTaggingWindow
             NextImage();
         }
 
-        private void ShowChromeWindow()
+        private void ShowWebBrowserWindow()
         {
-            var chromeDriverService = ChromeDriverService.CreateDefaultService();
-            chromeDriverService.HideCommandPromptWindow = true;
-            var opts = new ChromeOptions();
+            var opts = new FirefoxOptions();
             // If you wanna look classy uncomment one of these.
             //  Otherwise having the window is actually pretty useful
             if (!ShowBrowserWindow)
             {
                 //This version stops Lens from loading beyond the initial results
                 //opts.AddArgument("headless");
-                //This version spawns the chrome window offscreen
+                //This version spawns the browser window offscreen
                 opts.AddArgument("--window-position=-32000,-32000");
             }
-            _driver = new ChromeDriver(chromeDriverService, opts);
+            _driver = new OpenQA.Selenium.Firefox.FirefoxDriver(opts);
         }
         private void CloseBrowser()
         {
