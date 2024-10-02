@@ -36,7 +36,7 @@ namespace Tagging
         public static bool HasMetadataSocials(List<string> winTags, bool countSkipped = false)
         {
             if (countSkipped && winTags.Contains(nameless)) return false;
-            return (winTags.AsParallel().Any(item => IsSocialsTag(item)));
+            return (winTags.AsParallel().Any(item => IsTaggingTag(item)));
         }
 
         public static List<string> GetSocialTags(List<string> winTags)
