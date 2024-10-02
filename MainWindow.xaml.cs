@@ -10,6 +10,7 @@ using OpenQA.Selenium.Chrome;
 using System.Text.RegularExpressions;
 using System.Windows.Threading;
 using OpenQA.Selenium.Support.UI;
+using Tags = Tagging.Tagging;
 
 namespace SnapImageTaggingWindow
 {
@@ -28,7 +29,7 @@ namespace SnapImageTaggingWindow
                 UpdateDirectoryInfo();
             }
             ShowEventTagOptionsBox.IsChecked = false;
-            hideBrowserSide();
+            HideBrowserSide();
         }
 
         private void UpdateDirectoryInfo()
@@ -51,14 +52,14 @@ namespace SnapImageTaggingWindow
                         var tagsMaybe = img.Properties.Get(ExifTag.WindowsKeywords);
                         if (tagsMaybe != null)
                         {
-                            if (((string)tagsMaybe.Value).Contains(nameless))
+                            if (((string)tagsMaybe.Value).Contains(Tags.nameless))
                             {
                                 skipped++;
                             }
                             else
                             {
-                                var tagList = GetTagStringList((string)tagsMaybe.Value);
-                                if (!HasMetadataSocials(ref tagList))
+                                var tagList = Tags.GetTagStringList((string)tagsMaybe.Value);
+                                if (!Tags.HasMetadataSocials(tagList))
                                 {
                                     untagged++;
                                 }
@@ -77,7 +78,7 @@ namespace SnapImageTaggingWindow
 
         private void FileBrowseSource_Click(object sender, RoutedEventArgs e)
         {
-            FolderBrowserDialog folderBrowserDialog1 = new FolderBrowserDialog();
+            FolderBrowserDialog folderBrowserDialog1 = new();
             DialogResult result = folderBrowserDialog1.ShowDialog();
             if (result == System.Windows.Forms.DialogResult.OK)
             {
@@ -86,17 +87,12 @@ namespace SnapImageTaggingWindow
             }
         }
 
-        private IWebDriver _driver;
+        private OpenQA.Selenium.Chrome.ChromeDriver _driver;
         private IEnumerable<string> _fileList;
         private int _browserImgIndex;
 
-        private GridLength _1gridLength = new GridLength(1, GridUnitType.Star);
-        private GridLength _0gridLength = new GridLength(0, GridUnitType.Star);
-
-        private static string nameless = "unknownName";
-        private static string[] nametags = [
-            "name","discord","twitter", "instagram",
-            "telegram","twitch","tiktok", "bsky", "youtube"];
+        private GridLength _1gridLength = new(1, GridUnitType.Star);
+        private GridLength _0gridLength = new(0, GridUnitType.Star);
 
         private string _SDirPath = "";
         public string SourceDirPath
@@ -196,7 +192,7 @@ namespace SnapImageTaggingWindow
             if (ShouldTagEvents)
             {
                 //TODO Establish a plan to get the event name from the file name
-                var parentFolder = new DirectoryInfo(System.IO.Path.GetDirectoryName(fname)).Name;
+                var parentFolder = new DirectoryInfo(Path.GetDirectoryName(fname)!).Name;
                 int nameLen = parentFolder.Length;
                 int startCutoff = 0;
                 int endCutoff = nameLen;
@@ -211,16 +207,15 @@ namespace SnapImageTaggingWindow
                 if (EventDelimiter.Length == 0)
                     EventDelimiter = " ";
 
-                string eventString = parentFolder.Substring(startCutoff, endCutoff - startCutoff).Trim().ToLower();
+                string eventString = parentFolder[startCutoff..endCutoff].Trim().ToLower();
                 string[] wordList = eventString.Split(EventDelimiter);
 
-                int eventYear = -1;
                 string eventYearString = "";
 
                 if (wordList.Length > 0)
                 {
-                    if (int.TryParse(wordList[wordList.Length - 1], out eventYear)) {
-                        eventYearString = wordList[wordList.Length - 1];
+                    if (int.TryParse(wordList[^1], out _)) {
+                        eventYearString = wordList[^1];
                         wordList = wordList.SkipLast(1).ToArray();
                     }
                 }
@@ -263,7 +258,7 @@ namespace SnapImageTaggingWindow
 
                 if (img != null)
                 {
-                    var tagSet = GetTagStringList(ref img);
+                    var tagSet = Tags.GetTagStringList(img);
 
                     //tagSet.Add("tag:tagging_incomplete");
                     if (editTags(ref img, ref tagSet))
@@ -297,7 +292,7 @@ namespace SnapImageTaggingWindow
             }
         }
 
-        private void examineScreen()
+        private void ExamineScreen()
         {
             //TODO Strategies to maximize number of images available?
             //-Make Window wider
@@ -332,7 +327,7 @@ namespace SnapImageTaggingWindow
                 var imgCondition = By.TagName("img");
                 WaitUntilElementVisible(imgCondition);
                 var subImgs = element.FindElements(imgCondition);
-                if (subImgs.Count() == 0) continue;
+                if (subImgs.Count == 0) continue;
                 var imgElement = subImgs.ElementAt(0);
                 string ImageUrl = imgElement.GetAttribute("src");
                 string ImageName = imgElement.GetAttribute("alt");
@@ -341,14 +336,16 @@ namespace SnapImageTaggingWindow
                 {
                     string imgTooltip = ImageName + "\n" + ImageUrl;
                     var givenURL = element.GetAttribute("data-action-url");
-                    var newImage = new System.Windows.Controls.Image();
-                    newImage.Source = new BitmapImage(new Uri(ImageUrl));
-                    newImage.Tag = ImageName;
-                    newImage.Height = imageSize;
+                    var newImage = new System.Windows.Controls.Image
+                    {
+                        Source = new BitmapImage(new Uri(ImageUrl)),
+                        Tag = ImageName,
+                        Height = imageSize,
+                        ToolTip = givenURL,
+                        Margin = new System.Windows.Thickness(2),
+                        Cursor = System.Windows.Input.Cursors.Hand
+                    };
                     newImage.Width = Math.Min(imageSize, imageSize * newImage.Source.Width / newImage.Source.Height);
-                    newImage.ToolTip = givenURL;
-                    newImage.Margin = new System.Windows.Thickness(2);
-                    newImage.Cursor = System.Windows.Input.Cursors.Hand;
                     newImage.MouseDown += new System.Windows.Input.MouseButtonEventHandler(Image_MouseDown);
                     SimilarImages.Children.Add(newImage);
                 }
@@ -356,41 +353,11 @@ namespace SnapImageTaggingWindow
 
         }
 
-        private bool IsSocialsTag(string tag)
-        {
-            if (tag == nameless) return true;
-            else if (!tag.Contains(':')) return false;
-            else return nametags.Contains(tag.Substring(0, tag.IndexOf(":")));
-        }
 
-        private bool HasMetadataSocials(ref List<string> winTags, bool countSkipped = false)
-        {
-            if (countSkipped && winTags.Contains(nameless)) return false;
-            return (winTags.AsParallel().Any(item => IsSocialsTag(item)));
-        }
-
-        private List<string> GetTagStringList(ref ImageFile img)
-        {
-            var tagsMaybe = img.Properties.Get(ExifTag.WindowsKeywords);
-            if (tagsMaybe != null)
-            {
-                return GetTagStringList((tagsMaybe as WindowsByteString).Value);
-            }
-            return new List<string>();
-        }
-
-        private List<string> GetTagStringList(string tagString)
-        {
-            var tags = new List<string>();
-            tags.AddRange(tagString.Split(";"));
-            return tags;
-        }
-
-        private void nextImage()
+        private void NextImage()
         {
             SimilarImages.Children.Clear();
             NameEntryBox.Text = "";
-            bool DoSearchImg = false;
             string filePath;
             var fileCount = _fileList.Count();
 
@@ -401,23 +368,25 @@ namespace SnapImageTaggingWindow
                 //If it's untagged, break to move on
                 //Check if this image needs tagging
                 var imgMeta = ExifLibrary.JPEGFile.FromFile(filePath);
-                var tags = GetTagStringList(ref imgMeta);
+                var tags = Tags.GetTagStringList(imgMeta);
 
+                bool DoSearchImg;
                 if (tags.Count == 0)
                 {
                     DoSearchImg = true;
                 }
-                else {
-                    DoSearchImg = (!HasMetadataSocials(ref tags, ShouldBrowseSkipped));
+                else
+                {
+                    DoSearchImg = !Tags.HasMetadataSocials(tags, ShouldBrowseSkipped);
                 }
 
                 if (DoSearchImg)
                 {
                     if (_driver == null)
                     {
-                        showChromeWindow();
+                        ShowChromeWindow();
                     }
-                    visualSearchImage(filePath);
+                    VisualSearchImage(filePath);
                     break;
                 }
             }
@@ -425,16 +394,16 @@ namespace SnapImageTaggingWindow
             if (_browserImgIndex >= fileCount)
             {
                 System.Windows.MessageBox.Show("Reached the end of images to search.");
-                closeBrowser();
+                CloseBrowser();
                 return;
             }
             
         }
 
-        private void visualSearchImage(string path)
+        private void VisualSearchImage(string path)
         {
             //If this image needs tagging, display it, but leave the file available after
-            BitmapImage image = new BitmapImage();
+            BitmapImage image = new();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.UriSource = new Uri(path);
@@ -451,20 +420,19 @@ namespace SnapImageTaggingWindow
 
             //Class name looks weird.
             //What we really want is data-action-url tag
-            DelayAction(2000, examineScreen);
+            DelayAction(2000, ExamineScreen);
         }
 
 
-        private void submitTag(string tag)
+        private void SubmitTag(string tag)
         {
             //TODO Open image, apply tag, save
 
             var filePath = _fileList.ElementAt(_browserImgIndex);
             var img = ExifLibrary.JPEGFile.FromFile(filePath);
 
-            var tags = GetTagStringList(ref img);
-            if (tags.Contains(nameless))
-                tags.Remove(nameless);
+            var tags = Tags.GetTagStringList(img);
+            tags.Remove(Tags.nameless);
             editTags(ref img, ref tags);
             tags.Add(tag);
 
@@ -479,18 +447,17 @@ namespace SnapImageTaggingWindow
 
         }
 
-        private void joinCharacterTags(ref List<string> theirTags)
+        private void JoinCharacterTags(ref List<string> theirTags)
         {
             var filePath = _fileList.ElementAt(_browserImgIndex);
             var img = ExifLibrary.JPEGFile.FromFile(filePath);
-            var ourTags = GetTagStringList(ref img);
+            var ourTags = Tags.GetTagStringList(img);
             editTags(ref img, ref ourTags);
 
-            var toAdd = theirTags.Where(item => IsSocialsTag(item));
+            var toAdd = theirTags.Where(item => Tags.IsTaggingTag(item));
             ourTags.AddRange(toAdd);
 
-            if (ourTags.Contains(nameless))
-                ourTags.Remove(nameless);
+            ourTags.Remove(Tags.nameless);
 
             var tagString = String.Join(';', ourTags.Distinct());
             img.Properties.Set(ExifTag.WindowsKeywords, tagString);
@@ -510,37 +477,37 @@ namespace SnapImageTaggingWindow
             if (dialog.StartsWith("https://"))
             {
                 //Decipher web link
-                dialog = dialog.Substring(8);
+                dialog = dialog[8..];
                 if (dialog.StartsWith("www."))
-                    dialog = dialog.Substring(4);
+                    dialog = dialog[4..];
                 if (dialog.Contains('/') && dialog.Contains('.'))
                 {
-                    string host = dialog.Substring(0, dialog.IndexOf("."));
-                    string user = dialog.Substring(dialog.IndexOf("/") + 1);
+                    string host = dialog[..dialog.IndexOf('.')];
+                    string user = dialog[(dialog.IndexOf('/') + 1)..];
                     string profileString = "profile/";
                     if (user.Contains(profileString))
                     {
                         int startIndex = user.IndexOf(profileString) + profileString.Length;
-                        user = user.Substring(startIndex);
+                        user = user[startIndex..];
                     }
                     if (user.Contains('/'))
-                        user = user.Substring(0, user.IndexOf('/'));
+                        user = user[..user.IndexOf('/')];
                     if (user.Contains('@'))
-                        user = user.Substring(1);
+                        user = user[1..];
                     if (user.Contains('?'))
-                        user = user.Substring(0, user.IndexOf('?'));
+                        user = user[..user.IndexOf('?')];
                     if (host == "x")
                         host = "twitter";
 
-                    submitTag(host + ":" + user);
+                    SubmitTag(host + ":" + user);
                 }
             }
             else
             {
-                submitTag("name:" + dialog);
+                SubmitTag("name:" + dialog);
             }
 
-            nextImage();
+            NextImage();
         }
 
         private async void OptionsStartButton_Click(object sender, RoutedEventArgs e)
@@ -558,7 +525,7 @@ namespace SnapImageTaggingWindow
 
                 if (ShouldOpenBrowser)
                 {
-                    showBrowserSide();
+                    ShowBrowserSide();
                 }
                 else
                 {
@@ -566,7 +533,7 @@ namespace SnapImageTaggingWindow
                     {
                         await Task.Run(() => { ApplyMetadataNoBrowser(); });
                     }
-                    completeTagging();
+                    CompleteTagging();
                 }
             }
         }
@@ -586,7 +553,7 @@ namespace SnapImageTaggingWindow
             timer.Start();
         }
 
-        private void showBrowserSide()
+        private void ShowBrowserSide()
         {
             //Activate browser mode
             _browserImgIndex = -1;
@@ -599,10 +566,10 @@ namespace SnapImageTaggingWindow
 
             InfoColumn.Width = _0gridLength;
             BrowserColumn.Width = _1gridLength;
-            nextImage();
+            NextImage();
         }
 
-        private void showChromeWindow()
+        private void ShowChromeWindow()
         {
             var chromeDriverService = ChromeDriverService.CreateDefaultService();
             chromeDriverService.HideCommandPromptWindow = true;
@@ -618,24 +585,24 @@ namespace SnapImageTaggingWindow
             }
             _driver = new ChromeDriver(chromeDriverService, opts);
         }
-        private void closeBrowser()
+        private void CloseBrowser()
         {
             if (_driver != null)
             {
                 _driver.Quit();
                 _driver = null;
             }
-            completeTagging();
+            CompleteTagging();
         }
 
-        private void completeTagging()
+        private void CompleteTagging()
         {
-            hideBrowserSide();
+            HideBrowserSide();
             UpdateDirectoryInfo();
             //FileCountLabel.Content = "Metadata applied.";
         }
 
-        private void hideBrowserSide()
+        private void HideBrowserSide()
         {
             BrowserGrid.IsEnabled = false;
             OptionsStack.IsEnabled = true;
@@ -652,13 +619,13 @@ namespace SnapImageTaggingWindow
         {
             //Move to next image
             //Close browser if no more pics to search
-            submitTag(nameless);
-            nextImage();
+            SubmitTag(Tags.nameless);
+            NextImage();
         }
 
         private void BrowserEndButton_Click(object sender, RoutedEventArgs e)
         {
-            closeBrowser();
+            CloseBrowser();
         }
 
         private void NameSubmitButton_Click(object sender, RoutedEventArgs e)
@@ -725,11 +692,11 @@ namespace SnapImageTaggingWindow
         private void BrowserMatchingButton_Click(object sender, RoutedEventArgs e)
         {
             //Open file dialog.
-            var filebrowser = new System.Windows.Forms.OpenFileDialog();
-            filebrowser.Filter = "JPG images (*.JPG)|*.jpg";
-            filebrowser.Title = "Select matching image...";
-
-            bool foundMatch = false;
+            var filebrowser = new System.Windows.Forms.OpenFileDialog
+            {
+                Filter = "JPG images (*.JPG)|*.jpg",
+                Title = "Select matching image..."
+            };
             var picked = filebrowser.ShowDialog();
             string message = "";
             switch (picked)
@@ -740,17 +707,16 @@ namespace SnapImageTaggingWindow
                         if (File.Exists(filePath))
                         {
                             var imgMeta = ExifLibrary.JPEGFile.FromFile(filePath);
-                            var theirTags = GetTagStringList(ref imgMeta);
+                            var theirTags = Tags.GetTagStringList(imgMeta);
 
-                            if (HasMetadataSocials(ref theirTags))
+                            if (Tags.HasMetadataSocials(theirTags))
                             {
                                 //  If the user selects an image that has socials/name
                                 //  data on it:
                                 //      Copy said socials/name data.
                                 //      Move onto the next image
-                                joinCharacterTags(ref theirTags);
-                                foundMatch = true;
-                                nextImage();
+                                JoinCharacterTags(ref theirTags);
+                                NextImage();
                                 break;
                             }
                             else
