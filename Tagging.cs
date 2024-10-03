@@ -12,7 +12,7 @@ namespace Tagging
         public static string nameless = "unknownName";
         public static string eventPrefix = "event";
         public static string[] nametags = [
-            "name","discord","twitter", "instagram",
+            "name","discord","twitter", "instagram", "threads",
             "telegram","twitch","tiktok", "bsky", "youtube"];
 
         public static bool IsTaggingTag(string tag)
